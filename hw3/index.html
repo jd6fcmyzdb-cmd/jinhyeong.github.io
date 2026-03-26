@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Computer Graphics HW03</title>
+    <style>
+        body { 
+            background-color: #0b1a27; /* 비디오 배경색 */
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; overflow: hidden; font-family: monospace;
+        }
+        #container { position: relative; width: 700px; height: 700px; }
+        canvas { border: 1px solid #444; }
+        #info-overlay {
+            position: absolute; top: 10px; left: 10px;
+            color: white; pointer-events: none; line-height: 1.5; font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="glCanvas" width="700" height="700"></canvas>
+        <div id="info-overlay">
+            <div id="info1"></div>
+            <div id="info2"></div>
+            <div id="info3"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
