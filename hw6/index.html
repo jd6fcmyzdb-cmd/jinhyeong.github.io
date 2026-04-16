@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework 06 - Computer Graphics</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #ui-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            pointer-events: none; /* UI가 마우스 이벤트를 가로채지 않도록 설정 */
+            text-shadow: 1px 1px 2px black;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.2/gl-matrix-min.js"></script>
+</head>
+<body>
+    <div id="ui-container">
+        <div id="line1">Camera pos: (0.0, 0.0, 0.0) | Yaw: 0.0° | Pitch: 0.0°</div>
+        <div id="line2">WASD: move | Mouse: rotate (click to lock) | ESC: unlock</div>
+        <div id="line3">Left: Perspective | Right: Orthographic (Top-Down)</div>
+    </div>
+    
+    <canvas id="webgl-canvas" width="1400" height="700"></canvas>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
