@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>hw10_SolarSystem</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/stats.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <script>
+        // 1. 기본 환경 설정 (시작은 Perspective)
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        const aspect = width / height;
+        const perspCamera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+        perspCamera.position.set(0, 50, 100);
+        
+        const orthoCamera = new THREE.OrthographicCamera(-50 * aspect, 50 * aspect, 50, -50, 0.1, 1000);
+        orthoCamera.position.set(0, 50, 100);
+        
+        let currentCamera = perspCamera;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(width, height);
+        container.appendChild(renderer.domElement);
+
+        // Controls & Stats
+        const controls = new THREE.OrbitControls(currentCamera, renderer.domElement);
+        const stats = new Stats();
+        document.body.appendChild(stats.dom);
+
+        // 조명 설정 (태양 자체가 빛나므로 기본 Ambient와 중심 PointLight 배치)
+        const ambientLight = new THREE.AmbientLight(0x333333);
+        scene.add(ambientLight);
+        const sunLight = new THREE.PointLight(0xffffff, 2, 300);
+        scene.add(sunLight);
+
+        // 텍스처 로더
+        const textureLoader = new THREE.TextureLoader();
+
+        // 2. 행성 데이터 정의
+        const planetData = {
+            Mercury: { radius: 1.5, distance: 20, color: '#a6a6a6', rotationSpeed: 0.02, orbitSpeed: 0.02, texture: 'Mercury.jpg' },
+            Venus:   { radius: 3,   distance: 35, color: '#e39e1c', rotationSpeed: 0.015, orbitSpeed: 0.015, texture: 'Venus.jpg' },
+            Earth:   { radius: 3.5, distance: 50, color: '#3498db', rotationSpeed: 0.01, orbitSpeed: 0.01, texture: 'Earth.jpg' }, // 지구 이미지 필요 시 교체
+            Mars:    { radius: 2.5, distance: 65, color: '#c0392b', rotationSpeed: 0.008, orbitSpeed: 0.008, texture: 'Mars.jpg' }
+        };
+
+        // 3. 태양 생성
+        const sunGeometry = new THREE.SphereGeometry(10, 32, 32);
+        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // 자체 발광 느낌을 위해 BasicMaterial 사용
+        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+        scene.add(sun);
+
+        // 4. 행성 및 자전/공전 시스템 구축 (Pivot 중심 설계)
+        const planets = {};
+
+        Object.keys(planetData).forEach(key => {
+            const data = planetData[key];
+            
+            // 공전축 역할을 할 Pivot Group 생성
+            const pivot = new THREE.Group();
+            scene.add(pivot);
+            
+            // 행성 메쉬 생성 (기본 단색 컬러 설정 후 텍스처 로드)
+            const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+            const material = new THREE.MeshStandardMaterial({ color: data.color });
+            
+            // 로컬 경로의 이미지 로딩 (비동기)
+            textureLoader.load(data.texture, (tex) => {
+                material.map = tex;
+                material.needsUpdate = true;
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.x = data.distance; // 중심(태양)으로부터 거리만큼 이격
+            
+            pivot.add(mesh);
+
+            // 애니메이션 및 GUI 참조용 객체 저장
+            planets[key] = {
+                mesh: mesh,
+                pivot: pivot,
+                data: data
+            };
+        });
+
+        // 5. Dat.GUI 구성
+        const gui = new dat.GUI();
+        
+        // 카메라 폴더
+        const cameraFolder = gui.addFolder('Camera');
+        const cameraConfig = { type: 'Perspective' };
+        cameraFolder.add(cameraConfig, 'type', ['Perspective', 'Orthographic']).name('Current Camera').onChange((value) => {
+            if (value === 'Perspective') {
+                currentCamera = perspCamera;
+            } else {
+                currentCamera = orthoCamera;
+            }
+            controls.object = currentCamera;
+            controls.update();
+        });
+        cameraFolder.open();
+
+        // 행성 폴더들 순회 생성
+        Object.keys(planets).forEach(key => {
+            const p = planets[key];
+            const folder = gui.addFolder(key);
+            folder.add(p.data, 'rotationSpeed', 0, 0.1).name('Rotation Speed');
+            folder.add(p.data, 'orbitSpeed', 0, 0.1).name('Orbit Speed');
+            folder.open();
+        });
+
+        // 6. 애니메이션 루프
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 각 행성의 독립 자전 및 공전 처리
+            Object.keys(planets).forEach(key => {
+                const p = planets[key];
+                p.mesh.rotation.y += p.data.rotationSpeed; // 자체 Y축 자전
+                p.pivot.rotation.y += p.data.orbitSpeed;   // 태양 중심 공전
+            });
+
+            controls.update();
+            stats.update();
+            renderer.render(scene, currentCamera);
+        }
+
+        // 창 크기 변경 대응
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const a = w / h;
+
+            renderer.setSize(w, h);
+
+            perspCamera.aspect = a;
+            perspCamera.updateProjectionMatrix();
+
+            orthoCamera.left = -50 * a;
+            orthoCamera.right = 50 * a;
+            orthoCamera.top = 50;
+            orthoCamera.bottom = -50;
+            orthoCamera.updateProjectionMatrix();
+        });
+
+        animate();
+    </script>
+</body>
+</html>
